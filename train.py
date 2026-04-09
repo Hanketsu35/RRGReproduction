@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from utils.config import load_config
 from utils.logger import setup_logger
 from utils.checkpoint import CheckpointManager
+from utils.platform import select_torch_device, dataloader_runtime_settings
 from models.model_factory import MOERRGModel
 from data_pipeline.mimic_cxr_dataset import MIMICCXRDataset
 from data_pipeline.data_collator import DataCollator
@@ -278,12 +279,7 @@ def main():
     set_seed(seed)
 
     # Device — supports CUDA, MPS (Apple Silicon), and CPU
-    if torch.cuda.is_available():
-        device = torch.device(f"cuda:{args.gpu}")
-    elif torch.backends.mps.is_available():
-        device = torch.device("mps")
-    else:
-        device = torch.device("cpu")
+    device = select_torch_device(args.gpu)
 
     # Logger
     logger = setup_logger("moe_rrg_train", config["logging"]["log_dir"])
@@ -346,9 +342,12 @@ def main():
         is_train=False,
     )
 
-    # DataLoader — on MPS, num_workers=0 is safer; pin_memory only for CUDA
-    dl_num_workers = data_cfg.get("num_workers", 4) if device.type == "cuda" else 0
-    dl_pin_memory = data_cfg.get("pin_memory", True) and device.type == "cuda"
+    # Cross-platform DataLoader settings (safe on macOS/Windows/Linux)
+    dl_num_workers, dl_pin_memory = dataloader_runtime_settings(
+        requested_num_workers=data_cfg.get("num_workers", 4),
+        requested_pin_memory=data_cfg.get("pin_memory", True),
+        device=device,
+    )
 
     train_loader = DataLoader(
         train_dataset,

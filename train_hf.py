@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from utils.config import load_config
 from utils.logger import setup_logger
 from utils.checkpoint import CheckpointManager
+from utils.platform import select_torch_device, dataloader_runtime_settings
 from models.model_factory import MOERRGModel
 from mimic_cxr_hf import MIMICCXRHFDataset
 from data_pipeline.data_collator import DataCollator
@@ -70,13 +71,8 @@ def main():
     seed = args.seed
     set_seed(seed)
 
-    # Device: MPS for Mac, CUDA for GPU, else CPU
-    if torch.cuda.is_available():
-        device = torch.device("cuda:0")
-    elif torch.backends.mps.is_available():
-        device = torch.device("mps")
-    else:
-        device = torch.device("cpu")
+    # Device: cross-platform CUDA/MPS/CPU selection
+    device = select_torch_device(0)
 
     logger = setup_logger("moe_rrg_train", config["logging"]["log_dir"])
     logger.info(f"Config: {args.config}")
@@ -120,8 +116,11 @@ def main():
         is_train=False,
     )
 
-    dl_num_workers = 0  # Mac'te 0 en güvenli
-    dl_pin = device.type == "cuda"
+    dl_num_workers, dl_pin = dataloader_runtime_settings(
+        requested_num_workers=config["data"].get("num_workers", 0),
+        requested_pin_memory=config["data"].get("pin_memory", True),
+        device=device,
+    )
 
     train_loader = DataLoader(
         train_dataset,

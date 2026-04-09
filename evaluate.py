@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from utils.config import load_config
 from utils.logger import setup_logger
 from utils.metrics import compute_nlg_metrics, compute_clinical_metrics
+from utils.platform import select_torch_device, dataloader_runtime_settings
 from models.model_factory import MOERRGModel
 from data_pipeline.mimic_cxr_dataset import MIMICCXRDataset
 from data_pipeline.data_collator import DataCollator
@@ -263,12 +264,7 @@ def main():
 
     # Load config
     config = load_config(args.config)
-    if torch.cuda.is_available():
-        device = torch.device(f"cuda:{args.gpu}")
-    elif torch.backends.mps.is_available():
-        device = torch.device("mps")
-    else:
-        device = torch.device("cpu")
+    device = select_torch_device(args.gpu)
 
     # Logger
     logger = setup_logger("moe_rrg_eval", config["logging"]["log_dir"])
@@ -310,12 +306,18 @@ def main():
         is_train=False,
     )
 
+    dl_num_workers, dl_pin_memory = dataloader_runtime_settings(
+        requested_num_workers=data_cfg.get("num_workers", 4),
+        requested_pin_memory=data_cfg.get("pin_memory", True),
+        device=device,
+    )
+
     dataloader = DataLoader(
         dataset,
         batch_size=config["training"]["batch_size"],
         shuffle=False,
-        num_workers=data_cfg.get("num_workers", 4) if device.type == "cuda" else 0,
-        pin_memory=data_cfg.get("pin_memory", True) and device.type == "cuda",
+        num_workers=dl_num_workers,
+        pin_memory=dl_pin_memory,
         collate_fn=collator,
     )
 
