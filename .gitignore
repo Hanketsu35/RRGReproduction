@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/editor
+.vscode/
+.idea/
+
+# Logs and runtime artifacts
+logs/
+*.log
+
+# Training/checkpoint artifacts
+checkpoints/
+analysis/
+processed/
+
+# Local tooling
+.claude/
+
+# Reference artifacts
+*.pdf

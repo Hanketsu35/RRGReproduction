@@ -1,0 +1,9 @@
+# Ablation: without HP-QFormer
+inherits: "config_base.yaml"
+
+model:
+  hp_qformer:
+    enabled: false
+
+logging:
+  wandb_project: "moe-rrg-ablations"

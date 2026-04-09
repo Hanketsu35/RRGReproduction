@@ -1,0 +1,8 @@
+inherits: "config_base.yaml"
+
+model:
+  hp_qformer:
+    prefix_injection_depth: "sparse"
+
+ablation_name: "prefix_sparse"
+description: "Prefix injection at alternating decoder layers (0, 2). All other parameters inherit from base config."

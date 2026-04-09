@@ -1,0 +1,143 @@
+# CMN Ablation: Prior-Report Copy Mechanism Disabled
+
+# This config tests MOE-RRG WITHOUT the prior-report copy mechanism
+# to compare against the enhanced version with copy attention.
+
+# Use this for ablation comparison:
+#   python train_hf.py --config CONFIG/config_ablation_cmn_disabled.yaml
+
+seed: 42
+
+data:
+  dataset: "mimic_cxr"
+  root_dir: "/data/mimic-cxr"
+  metadata_csv: "/data/mimic-cxr/mimic-cxr-2.0.0-metadata.csv.gz"
+  report_csv: "/data/mimic-cxr/mimic_cxr_sectioned.csv"
+  split_csv: "/data/mimic-cxr/mimic-cxr-2.0.0-split.csv.gz"
+  processed_metadata_csv: "/data/mimic-cxr/processed/processed_metadata.csv"
+  max_image_size: 518
+  max_text_len: 256
+  max_indication_len: 64
+  max_prior_len: 128
+  max_impression_len: 128
+  num_workers: 4
+  pin_memory: true
+
+stage_bins:
+  - [1, 0]
+  - [2, 1]
+  - [3, 2]
+  - [6, 3]
+  - [11, 4]
+
+views:
+  - "AP"
+  - "PA"
+  - "LA"
+  - "LL"
+
+model:
+  visual_encoder:
+    name: "microsoft/rad-dino"
+    pretrained: true
+    frozen: true
+    patch_size: 14
+    hidden_size: 768
+    output_tokens: 49
+
+  text_encoder:
+    name: "microsoft/BiomedVLP-CXR-BERT-specialized"
+    hidden_size: 768
+    frozen: false
+    max_length: 256
+
+  auxiliary:
+    ind_prompt: "[IND]"
+    pri_prompt: "[PRI]"
+    gate_hidden_dim: 256
+
+  sv_moe:
+    enabled: true
+    num_experts: 4
+    num_stages: 5
+    num_views: 4
+    embed_dim: 64
+    router_hidden_dim: 128
+    expert_hidden_dim: 2048
+    use_top_k: 1
+    dropout: 0.1
+
+  hp_qformer:
+    enabled: true
+    num_queries: 32
+    num_layers: 4
+    hidden_size: 768
+    num_heads: 8
+    cross_attention_freq: 1
+    prefix_injection_depth: "all"
+    dropout: 0.1
+
+  # CMN: DISABLED for this ablation
+  cmn:
+    method: "disabled"
+
+  decoder:
+    num_layers: 3
+    hidden_size: 512
+    num_heads: 8
+    ffn_dim: 2048
+    dropout: 0.1
+    max_length: 256
+    vocab_size: 30522
+    pad_token_id: 0
+    bos_token_id: 101
+    eos_token_id: 102
+    inject_prefix_into_self: true
+
+  token_pooling:
+    output_grid: 7
+    method: "adaptive"
+
+training:
+  epochs: 50
+  batch_size: 16
+  grad_accum_steps: 2
+  max_grad_norm: 1.0
+
+  optimizer:
+    name: "adam"
+    lr_text_encoder: 2.0e-5
+    lr_transformer: 2.0e-4
+    lr_imp_branch: 5.0e-5
+    lr_default: 1.0e-4
+    weight_decay: 0.01
+    adam_beta1: 0.9
+    adam_beta2: 0.999
+
+  scheduler:
+    name: "cosine"
+    warmup_ratio: 0.1
+
+  lambda_moe: 0.2
+  lambda_imp: 0.1
+  tau: 0.07
+
+  fp16: true
+
+  early_stopping:
+    patience: 10
+    metric: "val_loss"
+    mode: "min"
+
+evaluation:
+  nlg_metrics:
+    - "bleu_1"
+    - "bleu_2"
+    - "bleu_3"
+    - "bleu_4"
+    - "meteor"
+    - "rouge_l"
+  clinical_metrics:
+    - "chexpert_f1"
+  beam_size: 5
+  length_penalty: 0.6

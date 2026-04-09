@@ -1,0 +1,10 @@
+# MIMIC-CXR dataset specific overrides
+inherits: "config_base.yaml"
+
+data:
+  dataset: "mimic_cxr"
+  root_dir: "/data/mimic-cxr"
+  metadata_csv: "/data/mimic-cxr/mimic-cxr-2.0.0-metadata.csv.gz"
+  report_csv: "/data/mimic-cxr/mimic_cxr_sectioned.csv"
+  split_csv: "/data/mimic-cxr/mimic-cxr-2.0.0-split.csv.gz"
+  processed_metadata_csv: "/data/mimic-cxr/processed/processed_metadata.csv"

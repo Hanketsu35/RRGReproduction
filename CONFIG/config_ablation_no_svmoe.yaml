@@ -1,0 +1,9 @@
+# Ablation: without SV-MoE
+inherits: "config_base.yaml"
+
+model:
+  sv_moe:
+    enabled: false
+
+logging:
+  wandb_project: "moe-rrg-ablations"

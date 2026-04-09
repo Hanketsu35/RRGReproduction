@@ -1,0 +1,25 @@
+# MOE-RRG config optimized for Mac Air M3 (8-16GB unified memory)
+inherits: "config_base.yaml"
+
+data:
+  num_workers: 0                  # Mac'te multiprocess sorun çıkarabilir
+  pin_memory: false               # Sadece CUDA için
+  max_image_size: 224             # 518 -> 224 (RAM tasarrufu, hız)
+
+model:
+  visual_encoder:
+    name: "microsoft/rad-dino"
+    pretrained: true
+    frozen: true
+    output_tokens: 49
+  decoder:
+    max_length: 64                # 256 -> 64 (RAM tasarrufu)
+
+training:
+  batch_size: 4                   # 16 -> 4 (RAM limiti)
+  grad_accum_steps: 4             # Effective batch = 16
+  fp16: false                     # MPS'de fp16 autocast deneysel
+  epochs: 20                      # İlk deneme için 20
+
+logging:
+  log_interval: 5

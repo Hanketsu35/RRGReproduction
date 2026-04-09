@@ -1,0 +1,8 @@
+inherits: "config_base.yaml"
+
+model:
+  hp_qformer:
+    prefix_injection_depth: "late"
+
+ablation_name: "prefix_late"
+description: "Prefix injection at late decoder layers only (2-3). All other parameters inherit from base config."

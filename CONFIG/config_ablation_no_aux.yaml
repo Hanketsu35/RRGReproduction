@@ -1,0 +1,9 @@
+# Ablation: without auxiliary textual cues
+inherits: "config_base.yaml"
+
+model:
+  auxiliary:
+    enabled: false
+
+logging:
+  wandb_project: "moe-rrg-ablations"

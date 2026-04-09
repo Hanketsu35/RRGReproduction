@@ -1,0 +1,151 @@
+"""Ablation config: MOE-RRG without token position weighting.
+
+This is the baseline configuration for measuring the impact of 
+Phase 3.1 token position weighting.
+
+All settings identical to config_base.yaml except:
+- token_weighting.enabled: false
+
+Expected result: Baseline BLEU without learned position weights.
+Compare against config_base.yaml to measure Phase 3.1 contribution.
+"""
+
+# Model Architecture
+model:
+  # Visual encoder: RAD-DINO (frozen)
+  visual_encoder:
+    name: "RAD-DINO"
+    pretrained: true
+    frozen: true
+    output_tokens: 49  # 7x7 patches from 224x224 images
+
+  # Text encoder: BiomedVLP-CXR-BERT (fine-tuned)
+  text_encoder:
+    name: "microsoft/BiomedVLP-CXR-BERT-specialized"
+    hidden_size: 768
+    frozen: false
+    max_length: 256
+
+  # Auxiliary Gate (mod 1: text-guided visual attention)
+  auxiliary:
+    enabled: true
+    gate_hidden_dim: 256
+
+  # SV-MoE (mod 2: stage-view experts)
+  sv_moe:
+    enabled: true
+    num_experts: 8
+    num_stages: 5     # 0: visit 1, 1: visit 2, ..., 4: visit >10
+    num_views: 4      # 0: AP, 1: PA, 2: LA, 3: LL
+    embed_dim: 64
+    router_hidden_dim: 128
+    expert_hidden_dim: 1024
+    dropout: 0.1
+
+  # HP-QFormer (mod 3: prefix extraction)
+  hp_qformer:
+    enabled: true
+    num_queries: 32
+    num_layers: 2
+    hidden_size: 512
+    num_heads: 8
+    prefix_injection_depth: "all"  # Inject at all decoder layers
+    dropout: 0.1
+
+  # Decoder (with prefix injection)
+  decoder:
+    num_layers: 4
+    hidden_size: 512
+    num_heads: 8
+    ffn_dim: 2048
+    max_length: 512
+    vocab_size: 30522  # BERT vocab size
+    pad_token_id: 0
+    bos_token_id: 101  # [CLS]
+    eos_token_id: 102  # [SEP]
+    dropout: 0.1
+    inject_prefix_into_self: true
+
+  # CMN (Copy Memory Network) - original minimal version
+  cmn_original:
+    enabled: true
+    hidden_size: 512
+    memory_slots: 128
+
+  # CMN (Copy Memory Network) - Phase 2.3 addition
+  # Set method to "disabled" to use only the original CMN
+  cmn:
+    method: "disabled"  # Options: "prior_attention", "learned_cache", "disabled"
+    num_heads: 8
+    dropout: 0.1
+    use_copy_gate: true
+
+  # Token Position Weighting - PHASE 3.1
+  # ABLATION: DISABLED for baseline comparison
+  token_weighting:
+    enabled: false  # <-- ABLATION BASELINE
+    max_seq_len: 512
+    initialization: "uniform"  # "uniform" or "by_position"
+
+# Training hyperparameters
+training:
+  num_epochs: 50
+  batch_size: 16
+  learning_rate: 1e-4
+  weight_decay: 0.01
+  warmup_steps: 2000
+  
+  # Loss weighting
+  loss:
+    ce_weight: 1.0        # Main generation loss
+    imp_weight: 1.0       # Impression classification aux loss
+    moe_weight: 0.01      # Load balancing aux loss
+    
+  # Optimizer
+  optimizer: "AdamW"
+  scheduler: "linear"     # Linear decay after warmup
+
+# Data configuration
+data:
+  dataset: "mimic-cxr"
+  data_dir: "data"
+  preprocessed_metadata: "data/processed_metadata.csv"
+  
+  # Split
+  train_split: "train"
+  val_split: "validate"
+  test_split: "test"
+  
+  # Features
+  num_workers: 8
+  pin_memory: true
+  shuffle_train: true
+  
+  # Random seed for reproducibility
+  seed: 42
+
+# Logging and checkpointing
+logging:
+  log_dir: "logs"
+  checkpoint_dir: "checkpoints"
+  result_dir: "results"
+  
+  # Log frequency
+  log_step: 100
+  val_step: 1000
+  
+  # Checkpointing
+  save_best_only: true
+  save_frequency: 1  # Save checkpoint every N epochs for best only
+  keep_last: 3
+
+# Evaluation
+evaluation:
+  metrics: ["BLEU", "METEOR", "ROUGE", "CIDEr"]
+  beam_size: 4
+  length_penalty: 0.8
+  num_beams: 4
+
+# Ablation tracking
+ablation_name: "no_token_weighting"
+description: "Baseline without Phase 3.1 token position weighting. Used to measure impact of learned position weights on convergence and BLEU."

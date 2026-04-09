@@ -1,0 +1,9 @@
+# Ablation: stage-only routing (no view info)
+inherits: "config_base.yaml"
+
+model:
+  sv_moe:
+    route_on_view: false          # Only use stage for routing
+
+logging:
+  wandb_project: "moe-rrg-ablations"

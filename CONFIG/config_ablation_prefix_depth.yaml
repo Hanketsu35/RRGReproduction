@@ -1,0 +1,9 @@
+# Ablation: prefix injection depth = 1 (first decoder layer only)
+inherits: "config_base.yaml"
+
+model:
+  hp_qformer:
+    prefix_injection_depth: 1     # Only inject prefix into layer 1
+
+logging:
+  wandb_project: "moe-rrg-ablations"
